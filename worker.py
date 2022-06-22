@@ -36,6 +36,7 @@ class Worker:
         excluded = self.__pending_posts + self.__processed_posts
         new_posts = self.__reddit.get_saved_posts(excluded=excluded)
         self.__pending_posts = [*new_posts, *self.__pending_posts]
+        self.__pending_posts = sorted(self.__pending_posts, reverse=True)
         if not self.__pending_posts:
             self.__logger.info("Worker", f"No posts to solve, sleeping for {IDLE_SLEEP/60} minutes.")
             time.sleep(IDLE_SLEEP)
@@ -57,7 +58,6 @@ class Worker:
                 yield unsaved_post
             else:
                 self.__refresh_pending_posts()
-                self.__pending_posts = sorted(self.__pending_posts, reverse=True)
     
     def get_unsolved_post(self):
         return self.__generator().__next__()

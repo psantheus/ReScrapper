@@ -227,7 +227,7 @@ class File:
     def group(self) -> str:
         photo_mimes = ["image/jpeg", "image/png", "image/webp"]
         anim_mimes = ["image/gif"]
-        video_mimes = ["video/mp4"]
+        video_mimes = ["video/mp4", "video/x-m4v"]
         audio_mimes = ["audio/mpeg"]
 
         if self.__mime_type in photo_mimes and self.__is_sendable_photo:

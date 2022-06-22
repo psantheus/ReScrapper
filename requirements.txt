@@ -1,0 +1,7 @@
+boto3==1.23.5
+discord.py==1.7.3
+Pillow==9.1.1
+praw==7.6.0
+python-dotenv==0.20.0
+python_magic==0.4.27
+requests==2.27.1

@@ -22,14 +22,14 @@ class Worker:
         for file in local_files:
             if os.path.isfile(file) is False:
                 if self.__filebase.download_file(file) is False:
-                    with open(file, "w", encoding="utf-8") as _:
+                    with open(file, "w", encoding="utf-16") as _:
                         self.__logger.info("Worker", f"Created new {file} successfully.")
             else:
                 self.__logger.info("Worker", f"{file} already exists locally, using local copy.")
         
-        with open("pending_posts.txt", "r", encoding="utf-8") as input_file:
+        with open("pending_posts.txt", "r", encoding="utf-16") as input_file:
             self.__pending_posts = [item.strip() for item in input_file.readlines()]
-        with open("processed_posts.txt", "r", encoding="utf-8") as input_file:
+        with open("processed_posts.txt", "r", encoding="utf-16") as input_file:
             self.__processed_posts = [item.strip() for item in input_file.readlines()]
 
     def __refresh_pending_posts(self):

@@ -1,7 +1,7 @@
 # A Telegram Bot for Reddit Scraping
 ##### Just a handy little worker app that finds new saved reddit posts and uploads a copy of the media onto a desired telegram channel.
 ##### Please open a issue if you have any requests.
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/psantheus/TelebotRedditScrape)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/psantheus/ReScrapper)
 
 ### Instructions for Chat ID
 #### Begin by setting channel to public and create a invite link.

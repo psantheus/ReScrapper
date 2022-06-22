@@ -36,6 +36,7 @@ class Worker:
         excluded = self.__pending_posts + self.__processed_posts
         new_posts = self.__reddit.get_saved_posts(excluded=excluded)
         self.__pending_posts = [*new_posts, *self.__pending_posts]
+        self.__pending_posts = sorted(self.__pending_posts)
         if not self.__pending_posts:
             self.__logger.info("Worker", f"No posts to solve, sleeping for {IDLE_SLEEP/60} minutes.")
             time.sleep(IDLE_SLEEP)
@@ -51,7 +52,6 @@ class Worker:
     def __generator(self):
         while True:
             if len(self.__pending_posts) != 0:
-                self.__pending_posts = sorted(self.__pending_posts)
                 unsaved_post = self.__pending_posts.pop()
                 self.__logger.info("Worker", f"Popped post with id: {unsaved_post} from pending posts.")
                 self.__list_to_file(self.__pending_posts, "pending_posts.txt")

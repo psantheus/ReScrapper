@@ -57,6 +57,7 @@ class Worker:
         if self.__failed_posts:
             self.__logger.info("Worker", "Failed posts found, queued for retyring.")
             self.__pending_posts.extend(self.__failed_posts)
+            self.__pending_posts = list(set(self.__pending_posts))
             self.__pending_posts = sorted(self.__pending_posts, reverse=True)
         else:
             self.__logger.info("Wokrer", "No failed posts found, continuing as usual.")

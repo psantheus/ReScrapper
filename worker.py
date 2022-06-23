@@ -136,5 +136,5 @@ if __name__=="__main__":
         time.sleep(SLEEP_BETWEEN_POSTS)
         if mod == 0:
             workerInstance.load_refresher()
-            logger.info("Worker", f"Sleeping for {15*SLEEP_BETWEEN_POSTS} seconds to allow manual stopping without errors.")
-            time.sleep(15*SLEEP_BETWEEN_POSTS)
+            logger.info("Worker", f"Sleeping for {3*SLEEP_BETWEEN_POSTS} seconds to allow manual stopping without errors.")
+            time.sleep(3*SLEEP_BETWEEN_POSTS)

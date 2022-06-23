@@ -88,7 +88,7 @@
 },
 "SLEEP_ON_FAILED_GET": {
 "description": "Sleep duration in seconds on a failed GET request, recommended to set for limiting usage.",
-"value": "30"
+"value": "20"
 },
 "GET_ATTEMPTS": {
 "description": "Total number of attemps to be made on a GET request, considered as failure if 200(OK) not received.",
@@ -96,7 +96,7 @@
 },
 "SLEEP_ON_FAILED_POST": {
 "description": "Sleep duration in seconds on a failed POST request, recommended to set for limiting usage.",
-"value": "30"
+"value": "20"
 },
 "POST_ATTEMPTS": {
 "description": "Total number of attemps to be made on a POST request, considered as failure if 200(OK) not received.",

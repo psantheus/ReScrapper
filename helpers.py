@@ -26,7 +26,7 @@ class LoggingHelper:
         stream_handler = logging.StreamHandler()
 
         file_handler.setLevel(logging.DEBUG)
-        stream_handler.setLevel(logging.INFO)
+        stream_handler.setLevel(logging.DEBUG)
 
         file_handler.setFormatter(formatter)
         stream_handler.setFormatter(formatter)

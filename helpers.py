@@ -253,7 +253,7 @@ class File:
             _WH_ratio = width / height
             _HW_ratio = height / width
             _dim_sum = height + width
-            if _WH_ratio > 20 or _HW_ratio > 20 or _dim_sum > 10000 or self.__size > TEN_MB:
+            if _WH_ratio > 20 or _HW_ratio > 20 or _dim_sum > 10000 or self.__size > TEN_MB or width > 1280 or height > 1280:
                 return False
             else:
                 return True

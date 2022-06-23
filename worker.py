@@ -12,13 +12,16 @@ class Worker:
 
         self.__pending_posts = None
         self.__processed_posts = None
+        self.__failed_posts = None
         self.__init_local_files()
         self.__refresh_pending_posts()
+        self.__retry_failed_posts()
 
     def __init_local_files(self):
         local_files = [
             "pending_posts.txt",
-            "processed_posts.txt"
+            "processed_posts.txt",
+            "failed_posts.txt"
         ]
         for file in local_files:
             if os.path.isfile(file) is False:
@@ -32,9 +35,11 @@ class Worker:
             self.__pending_posts = [item.strip() for item in input_file.readlines()]
         with open("processed_posts.txt", "r", encoding="utf-16") as input_file:
             self.__processed_posts = [item.strip() for item in input_file.readlines()]
+        with open("failed_posts.txt", "r", encoding="utf-16") as input_file:
+            self.__failed_posts = [item.strip() for item in input_file.readlines()]
 
     def __refresh_pending_posts(self):
-        excluded = self.__pending_posts + self.__processed_posts
+        excluded = self.__pending_posts + self.__processed_posts + self.__failed_posts
         new_posts = self.__reddit.get_saved_posts(excluded=excluded)
         self.__pending_posts = [*new_posts, *self.__pending_posts]
         self.__pending_posts = sorted(self.__pending_posts, reverse=True)
@@ -46,6 +51,15 @@ class Worker:
             self.__logger.info("Worker", "Pending posts updated.")
         else:
             self.__logger.info("Worker", "No new posts to solve, continuing with currently pending posts.")
+
+    def __retry_failed_posts(self):
+        self.__logger.info("Worker", "Searching for old failed posts to retry.")
+        if self.__failed_posts:
+            self.__logger.info("Worker", "Failed posts found, queued for retyring.")
+            self.__pending_posts.extend(self.__failed_posts)
+            self.__pending_posts = sorted(self.__pending_posts, reverse=True)
+        else:
+            self.__logger.info("Wokrer", "No failed posts found, continuing as usual.")
 
     def load_refresher(self):
         self.__logger.info("Worker", "Periodic check for new posts if any.")
@@ -91,15 +105,19 @@ class Worker:
                     self.__discord.send(MESSAGES_WEBHOOK, post_id)
                 elif group == "group":
                     self.__discord.send(GROUP_WEBHOOK, post_id)
+                self.__logger.info("Worker", f"Finished solving post with id: {post_id}")
+                self.__processed_posts.append(post_id)
+                self.__list_to_file(self.__processed_posts, "processed_posts.txt")
             else:
                 self.__logger.info("Worker", f"Failure solving post with id: {post_id}")
                 self.__discord.send(FAILED_WEBHOOK, post_id)
+                self.__failed_posts.append(post_id)
+                self.__list_to_file(self.__failed_posts, "failed_posts.txt")
         else:
             self.__logger.info("Worker", f"Failure solving post with id: {post_id}")
             self.__discord.send(FAILED_WEBHOOK, post_id)
-        self.__logger.info("Worker", f"Finished solving post with id: {post_id}")
-        self.__processed_posts.append(post_id)
-        self.__list_to_file(self.__processed_posts, "processed_posts.txt")
+            self.__failed_posts.append(post_id)
+            self.__list_to_file(self.__failed_posts, "failed_posts.txt")
         self.__filebase.upload_file("events.log")  
 
 if __name__=="__main__":

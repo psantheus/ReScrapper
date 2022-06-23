@@ -74,6 +74,7 @@ class RequestsHelper:
                 response = requests.get(resource_url, headers=get_headers)
                 for blacklisted_url in blacklist:
                     if response.url == blacklisted_url:
+                        self.__logger.error("Requests", "URL blacklisted, failure obtaining resource.")
                         return None
                 if response.status_code == 200:
                     resource_obtained = True
@@ -90,6 +91,7 @@ class RequestsHelper:
                 self.__logger.info("Requests", "Resource obtained successfully.")
                 return response
             else:
+                self.__logger.debug("Requests", f"Request returned {response.status_code}({response.reason}).")
                 self.__logger.error("Requests", "Failure obtaining resource.")
                 return None
 
@@ -118,6 +120,7 @@ class RequestsHelper:
                 self.__logger.info("Requests", "Resource sent successfully.")
                 return response
             else:
+                self.__logger.debug("Requests", f"Request returned {response.status_code}({response.reason}).")
                 self.__logger.error("Requests", "Failure sending resource.")
                 return None
 

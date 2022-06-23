@@ -52,6 +52,7 @@ class Worker:
     def __generator(self):
         while True:
             if len(self.__pending_posts) != 0:
+                self.__logger.info("Worker", f"{len(self.__pending_posts)} posts remaining before refresh.")
                 unsaved_post = self.__pending_posts.pop()
                 self.__logger.info("Worker", f"Popped post with id: {unsaved_post} from pending posts.")
                 self.__list_to_file(self.__pending_posts, "pending_posts.txt")

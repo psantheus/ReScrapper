@@ -79,8 +79,8 @@
 "value": ""
 },
 "SLEEP_BETWEEN_POSTS": {
-"description": "Sleep after each post, recommended to set for limiting API usage.",
-"value": "10"
+"description": "Sleep after each post, recommended to set for limiting API usage, a sleep of 10xSLEEP_BETWEEN_POSTS will happen after every REFRESH_AFTER_POSTS posts.",
+"value": "2"
 },
 "IDLE_SLEEP": {
 "description": "Sleep duration in seconds if posts not found, recommended to set for limiting API usage.",

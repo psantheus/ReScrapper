@@ -10,10 +10,6 @@ class Worker:
         self.__telegram = TelegramHelper(self.__logger, self.__requester)
         self.__discord = DiscordHelper(self.__logger)
 
-        if REFRESH_AFTER_POSTS < 5:
-            REFRESH_AFTER_POSTS = 5
-            self.__logger.info("Worker", "REFRESH_AFTER_POSTS < 5, setting to 5 to check after every 5 posts.")
-
         self.__pending_posts = None
         self.__processed_posts = None
         self.__init_local_files()
@@ -22,8 +18,7 @@ class Worker:
     def __init_local_files(self):
         local_files = [
             "pending_posts.txt",
-            "processed_posts.txt",
-            "events.log"
+            "processed_posts.txt"
         ]
         for file in local_files:
             if os.path.isfile(file) is False:
@@ -111,6 +106,11 @@ if __name__=="__main__":
     logger = LoggingHelper()
     requester = RequestsHelper(logger)
     workerInstance = Worker(logger, requester)
+
+    if REFRESH_AFTER_POSTS < 5:
+        REFRESH_AFTER_POSTS = 5
+        logger.info("Worker", "REFRESH_AFTER_POSTS < 5, setting to 5 to check after every 5 posts.")
+
     for mod in itertools.cycle(range(REFRESH_AFTER_POSTS-1, -1, -1)):
         unsolved_post = workerInstance.get_unsolved_post()
         workerInstance.solve_post(unsolved_post)

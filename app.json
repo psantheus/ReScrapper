@@ -84,15 +84,15 @@
 },
 "IDLE_SLEEP": {
 "description": "Sleep duration in seconds if posts not found, recommended to set for limiting API usage.",
-"value": "900"
+"value": "600"
 },
 "SLEEP_ON_FAILED_GET": {
 "description": "Sleep duration in seconds on a failed GET request, recommended to set for limiting usage.",
-"value": "60"
+"value": "30"
 },
 "GET_ATTEMPTS": {
 "description": "Total number of attemps to be made on a GET request, considered as failure if 200(OK) not received.",
-"value": "5"
+"value": "3"
 },
 "SLEEP_ON_FAILED_POST": {
 "description": "Sleep duration in seconds on a failed POST request, recommended to set for limiting usage.",
@@ -101,6 +101,10 @@
 "POST_ATTEMPTS": {
 "description": "Total number of attemps to be made on a POST request, considered as failure if 200(OK) not received.",
 "value": "3"
+},
+"REFRESH_AFTER_POSTS": {
+"description": "After how many posts should bot frequently check for new posts, set lower for higher frequency, minimum value of 5.",
+"value": "10"
 }
 },
 "formation": {

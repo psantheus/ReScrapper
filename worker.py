@@ -1,4 +1,5 @@
 from helpers import *
+import itertools
 
 class Worker:
     def __init__(self, logger:LoggingHelper, requester:RequestsHelper) -> None:
@@ -9,6 +10,10 @@ class Worker:
         self.__telegram = TelegramHelper(self.__logger, self.__requester)
         self.__discord = DiscordHelper(self.__logger)
 
+        if REFRESH_AFTER_POSTS < 5:
+            REFRESH_AFTER_POSTS = 5
+            self.__logger.info("Worker", "REFRESH_AFTER_POSTS < 5, setting to 5 to check after every 5 posts.")
+
         self.__pending_posts = None
         self.__processed_posts = None
         self.__init_local_files()
@@ -17,7 +22,8 @@ class Worker:
     def __init_local_files(self):
         local_files = [
             "pending_posts.txt",
-            "processed_posts.txt"
+            "processed_posts.txt",
+            "events.log"
         ]
         for file in local_files:
             if os.path.isfile(file) is False:
@@ -43,6 +49,12 @@ class Worker:
         elif new_posts:
             self.__list_to_file(self.__pending_posts, "pending_posts.txt")
             self.__logger.info("Worker", "Pending posts updated.")
+        else:
+            self.__logger.info("Worker", "No new posts to solve, continuing with currently pending posts.")
+
+    def load_refresher(self):
+        self.__logger.info("Worker", "Periodic check for new posts if any.")
+        self.__refresh_pending_posts()
 
     def __list_to_file(self, list:list, file:str):
         with open(file, "w", encoding="utf-16") as output_file:
@@ -99,7 +111,9 @@ if __name__=="__main__":
     logger = LoggingHelper()
     requester = RequestsHelper(logger)
     workerInstance = Worker(logger, requester)
-    while True:
+    for mod in itertools.cycle(range(REFRESH_AFTER_POSTS-1, -1, -1)):
         unsolved_post = workerInstance.get_unsolved_post()
         workerInstance.solve_post(unsolved_post)
         time.sleep(SLEEP_BETWEEN_POSTS)
+        if mod == 0:
+            workerInstance.load_refresher()

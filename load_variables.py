@@ -29,6 +29,7 @@ SLEEP_ON_FAILED_GET = int(os.environ.get("SLEEP_ON_FAILED_GET"))
 GET_ATTEMPTS = int(os.environ.get("GET_ATTEMPTS"))
 SLEEP_ON_FAILED_POST = int(os.environ.get("SLEEP_ON_FAILED_POST"))
 POST_ATTEMPTS = int(os.environ.get("POST_ATTEMPTS"))
+REFRESH_AFTER_POSTS = int(os.environ.get("REFRESH_AFTER_POSTS"))
 
 # Global constants
 TEN_MB = int(10*1024*1024)

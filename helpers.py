@@ -274,36 +274,6 @@ class DiscordHelper:
         self.__get_webhook(webhook_url=webhook_url).send(message)
         self.__logger.info("Discord", "Message posted.")
 
-class FilebaseHelper:
-    def __init__(self, logger:LoggingHelper) -> None:
-        self.__logger = logger
-        self.__filebase_client = boto3.client(
-            service_name="s3",
-            endpoint_url="https://s3.filebase.com",
-            aws_access_key_id=FILEBASE_KEY,
-            aws_secret_access_key=FILEBASE_SECRET
-        )
-
-    def upload_file(self, file) -> bool:
-        '''Uploads file to bucket.'''
-        try:
-            self.__filebase_client.upload_file(file, FILEBASE_BUCKET_NAME, os.path.basename(file))
-            self.__logger.info("Filebase", f"Uploaded {file} successfully.")
-            return True
-        except:
-            self.__logger.info("Filebase", f"Failure uploading {file}.")
-            return False
-
-    def download_file(self, file) -> bool:
-        '''Downloads file from bucket.'''
-        try:
-            self.__filebase_client.download_file(FILEBASE_BUCKET_NAME, os.path.basename(file), file)
-            self.__logger.info("Filebase", f"Downloaded {file} successfully.")
-            return True
-        except:
-            self.__logger.info("Filebase", f"Failure downloading {file}.")
-            return False
-
 class RedditHelper:
     def __init__(self, logger:LoggingHelper, requester:RequestsHelper) -> None:
         self.__logger = logger

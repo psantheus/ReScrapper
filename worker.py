@@ -5,7 +5,6 @@ class Worker:
     def __init__(self, logger:LoggingHelper, requester:RequestsHelper) -> None:
         self.__logger = logger
         self.__requester = requester
-        self.__filebase = FilebaseHelper(self.__logger)
         self.__reddit = RedditHelper(self.__logger, self.__requester)
         self.__telegram = TelegramHelper(self.__logger, self.__requester)
         self.__discord = DiscordHelper(self.__logger)
@@ -25,9 +24,8 @@ class Worker:
         ]
         for file in local_files:
             if os.path.isfile(file) is False:
-                if self.__filebase.download_file(file) is False:
-                    with open(file, "w", encoding="utf-16") as _:
-                        self.__logger.info("Worker", f"Created new {file} successfully.")
+                with open(file, "w", encoding="utf-16") as _:
+                    self.__logger.info("Worker", f"Created new {file} successfully.")
             else:
                 self.__logger.info("Worker", f"{file} already exists locally, using local copy.")
         
@@ -69,7 +67,6 @@ class Worker:
     def __list_to_file(self, list:list, file:str):
         with open(file, "w", encoding="utf-16") as output_file:
             output_file.write("\n".join(list))
-        self.__filebase.upload_file(file)
 
     def __generator(self):
         while True:
@@ -119,7 +116,6 @@ class Worker:
             self.__discord.send(FAILED_WEBHOOK, post_id)
             self.__failed_posts.append(post_id)
             self.__list_to_file(self.__failed_posts, "failed_posts.txt")
-        self.__filebase.upload_file("events.log")  
 
 if __name__=="__main__":
     logger = LoggingHelper()

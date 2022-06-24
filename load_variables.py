@@ -31,12 +31,6 @@ REFRESH_AFTER_POSTS = int(os.environ.get("REFRESH_AFTER_POSTS"))
 # Global constants
 TEN_MB = int(10*1024*1024)
 FIFTY_MB = int(50*1024*1024)
-GET_HEADERS = {
-    "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-    "Accept-Encoding":"gzip, deflate, br",
-    "Accept-Language":"en-IN,en-GB;q=0.9,en-US;q=0.8,en;q=0.7",
-    "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"
-}
-POST_HEADERS = {
+REQUEST_HEADERS = {
     "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"
 }

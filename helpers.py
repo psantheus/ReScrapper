@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import magic
+import math
 import os
 import PIL.Image
 import praw
@@ -25,7 +26,7 @@ class LoggingHelper:
         stream_handler = logging.StreamHandler()
 
         file_handler.setLevel(logging.DEBUG)
-        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setLevel(logging.INFO)
 
         file_handler.setFormatter(formatter)
         stream_handler.setFormatter(formatter)
@@ -62,7 +63,7 @@ class RequestsHelper:
     
     def get(self, resource_url:str) -> requests.Response|None:
         '''GET Request, returns Response if no errors, None otherwise.'''
-        get_headers = GET_HEADERS
+        get_headers = REQUEST_HEADERS
         blacklist = ["https://i.imgur.com/removed.png"]
         resource_obtained = False
         attempts_till_now = 0
@@ -97,7 +98,7 @@ class RequestsHelper:
 
     def post(self, api_url:str, files=None, data=None) -> requests.Response|None:
         '''POST Request, returns Response if no errors, None otherwise.'''
-        post_headers = POST_HEADERS
+        post_headers = REQUEST_HEADERS
         resource_sent = False
         attempts_till_now = 0
         self.__logger.debug("Requests", f"Sending POST request to Telegram API")
@@ -464,18 +465,46 @@ class TelegramHelper:
                 caption_list.append("\n".join(base_message + [f"Image URL: {image_link}"]))
             if file_list:
                 send_status = []
-                div_groups = 1.0
-                while (len(file_list)/div_groups) > 10.0:
-                    div_groups += 1.0
-                group_size = int(len(file_list)/div_groups)
-                for div in range(int(div_groups)):
-                     send_status.append(self.__send_media(file_list[(div*group_size):((div+1)*group_size)], caption_list[(div*group_size):((div+1)*group_size)])[0])
+                groups, max_group_length = self.__split_group(file_list)
+                for div in range(int(groups)):
+                    div_range = range(div*max_group_length, min((div+1)*max_group_length, len(file_list)))
+                    current_file_group = [file_list[ix] for ix in div_range]
+                    current_caption_group = [caption_list[ix] for ix in div_range]
+                    send_status.append(self.__send_media(current_file_group, current_caption_group)[0])
                 if False not in send_status:
                     return True, "group"
+                else:
+                    return False, "failed"
             else:
                 return False, "failed"
         else:
             return False, "failed"
+
+    def __split_group(self, file_list:list[File]) -> tuple[int, int]:
+        self.__logger.info("Telegram", f"Total files to send: {len(file_list)}")
+        total_size = sum([len(file.bytes) for file in file_list]) / (1024*1024)
+        self.__logger.info("Telegram", f"Total size of files in MBs: {total_size}")
+
+        groups = 1
+        while int(math.ceil(len(file_list)/float(groups))) > 10.0:
+            groups += 1
+        self.__logger.debug("Telegram", f"Groups: {groups}, files per group less than 10, partial conditions met.")
+        self.__logger.debug("Telegram", "Checking if total size of each individual group satisfies limits.")
+        while True:
+            self.__logger.debug("Telegram", f"Checking for groups: {groups}.")
+            max_group_length = int(math.ceil(len(file_list)/float(groups)))
+            max_group_size = 0
+            for div in range(groups):
+                current_group = [file_list[ix] for ix in range(div*max_group_length, min((div+1)*max_group_length, len(file_list)))]
+                max_group_size = max(max_group_size, sum([len(file.bytes) for file in current_group]) / (1024*1024))
+            self.__logger.debug("Telegram", f"Maximum group size at groups: {groups} is {max_group_size}.")
+            if max_group_size > 50.0:
+                groups += 1
+            else:
+                self.__logger.debug("Telegram", "Group-wise sizes within limits, all conditions met.")
+                break
+        self.__logger.info("Telegram", f"Maximum group of length {max_group_length} posts suitable.")
+        return groups, max_group_length
 
     def __solve_imgur(self, post_details:list) -> tuple[bool, str]:
         self.__logger.info("Telegram", "Post falls under Imgur-hosted media.")

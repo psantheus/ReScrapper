@@ -67,10 +67,15 @@ class RequestsHelper:
         resource_obtained = False
         attempts_till_now = 0
         self.__logger.debug("Requests", f"Sending GET request to URL: {resource_url}")
-        try:
-            while (not resource_obtained) and (attempts_till_now < GET_ATTEMPTS):
+        while (not resource_obtained) and (attempts_till_now < GET_ATTEMPTS):
+            try:
                 self.__logger.debug("Requests", f"Current attempt: {attempts_till_now+1}/{GET_ATTEMPTS}")
                 response = requests.get(resource_url, headers=get_headers)
+            except Exception as error:
+                self.__logger.error("Requests", error)
+                self.__logger.debug("Requests", f"Exception was thrown, retrying after {3*SLEEP_ON_FAILED_GET} seconds.")
+                time.sleep(3*SLEEP_ON_FAILED_GET)
+            else:
                 for blacklisted_url in blacklist:
                     if response.url == blacklisted_url:
                         self.__logger.error("Requests", "URL blacklisted, failure obtaining resource.")
@@ -82,17 +87,13 @@ class RequestsHelper:
                     self.__logger.debug("Requests", f"Attempt unsuccessful, retrying in {SLEEP_ON_FAILED_GET} seconds.")
                     attempts_till_now += 1
                     time.sleep(SLEEP_ON_FAILED_GET)
-        except Exception as error:
-            self.__logger.error("Requests", error)
-            return None
+        if resource_obtained:
+            self.__logger.info("Requests", "Resource obtained successfully.")
+            return response
         else:
-            if resource_obtained:
-                self.__logger.info("Requests", "Resource obtained successfully.")
-                return response
-            else:
-                self.__logger.debug("Requests", f"Request returned {response.status_code}({response.reason}).")
-                self.__logger.error("Requests", "Failure obtaining resource.")
-                return None
+            self.__logger.debug("Requests", f"Request returned {response.status_code}({response.reason}).")
+            self.__logger.error("Requests", "Failure obtaining resource.")
+            return None
 
     def post(self, api_url:str, files=None, data=None) -> requests.Response|None:
         '''POST Request, returns Response if no errors, None otherwise.'''
@@ -100,10 +101,15 @@ class RequestsHelper:
         resource_sent = False
         attempts_till_now = 0
         self.__logger.debug("Requests", f"Sending POST request to Telegram API")
-        try:
-            while (not resource_sent) and (attempts_till_now < POST_ATTEMPTS):
+        while (not resource_sent) and (attempts_till_now < POST_ATTEMPTS):
+            try:
                 self.__logger.debug("Requests", f"Current attempt: {attempts_till_now+1}/{POST_ATTEMPTS}")
                 response = requests.post(api_url, files=files, data=data, headers=post_headers)
+            except Exception as error:
+                self.__logger.error("Requests", error)
+                self.__logger.debug("Requests", f"Exception was thrown, retrying after {3*SLEEP_ON_FAILED_POST} seconds.")
+                time.sleep(3*SLEEP_ON_FAILED_POST)
+            else:
                 if response.status_code == 200:
                     resource_sent = True
                     break
@@ -111,17 +117,13 @@ class RequestsHelper:
                     self.__logger.debug("Requests", f"Attempt unsuccessful, retrying in {SLEEP_ON_FAILED_POST} seconds.")
                     attempts_till_now += 1
                     time.sleep(SLEEP_ON_FAILED_POST)
-        except Exception as error:
-            self.__logger.error("Requests", error)
-            return None
+        if resource_sent:
+            self.__logger.info("Requests", "Resource sent successfully.")
+            return response
         else:
-            if resource_sent:
-                self.__logger.info("Requests", "Resource sent successfully.")
-                return response
-            else:
-                self.__logger.debug("Requests", f"Request returned {response.status_code}({response.reason}).")
-                self.__logger.error("Requests", "Failure sending resource.")
-                return None
+            self.__logger.debug("Requests", f"Request returned {response.status_code}({response.reason}).")
+            self.__logger.error("Requests", "Failure sending resource.")
+            return None
 
     def check_domain(self, resource_url:str) -> list[str, str]:
         self.__logger.debug("Requests", "Checking URL domain.")

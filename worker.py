@@ -111,7 +111,10 @@ class Worker:
                 self.__list_to_file(self.__processed_posts, "processed_posts.txt")
             else:
                 self.__logger.error("Worker", f"Failure solving post with id: {post_id}")
-                self.__discord.send(FAILED_WEBHOOK, post_id)
+                if group == "duplicate":
+                    self.__discord.send(DUPLICATES_WEBHOOK, post_id)
+                elif group == "failed":
+                    self.__discord.send(FAILED_WEBHOOK, post_id)
                 self.__failed_posts.append(post_id)
                 self.__list_to_file(self.__failed_posts, "failed_posts.txt")
         else:

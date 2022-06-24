@@ -343,6 +343,38 @@ class TelegramHelper:
         self.__media_group_api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMediaGroup"
         self.__message_api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
+        self.__hash_dict = None
+        self.__init_hash_dict()
+
+    def __init_hash_dict(self):
+        if os.path.isfile("hashes.txt") is False:
+            with open("hashes.txt", "w", encoding="utf-16") as _:
+                self.__logger.info("Worker", f"Created new hashes.txt successfully.")
+        else:
+            self.__logger.info("Worker", f"hashes.txt already exists locally, using local copy.")
+
+        with open("hashes.txt", "r", encoding="utf-16") as input_file:
+            self.__hash_dict = {hash:post_id for post_id, hash in [item.strip().split(':') for item in input_file.readlines()]}
+
+    def __hash_dict_to_file(self):
+        with open("hashes.txt", "w", encoding="utf-16") as output_file:
+            for hash, post_id in self.__hash_dict.items():
+                output_file.write(post_id+":"+hash+"\n")
+            self.__logger.info("Telegram", "hashes.txt updated.")
+
+    def __check_hash(self, hash:str):
+        if hash not in self.__hash_dict:
+            self.__logger.info("Telegram", "Hash not found, unique post.")
+            return True
+        else:
+            self.__logger.info("Telegram", f"Post previously solved at {self.__hash_dict[hash]}, ignoring post.")
+            return False
+
+    def __update_hashes(self, hash_list:list[str], post_id:str):
+        for hash in hash_list:
+            self.__hash_dict[hash] = post_id
+        self.__hash_dict_to_file()
+
     def __get_base_message_from_post_details(self, post_details:list) -> list[str]:
         base_message = []
         if post_details[0] is not None:
@@ -358,46 +390,54 @@ class TelegramHelper:
         self.__logger.info("Telegram", "Obtained base caption.")
         return base_message
 
-    def __send_single(self, file:File, caption:str) -> tuple[bool, str]:
+    def __send_single(self, file:File, caption:str, post_id:str) -> tuple[bool, str]:
         api_url = None
         params = None
         if file.file_headers:
-            params = {'chat_id':TELEGRAM_CHAT_ID, 'caption':caption}
-            if file.group == "photo":
-                api_url = self.__image_api_url
-                self.__logger.info("Telegram", "File sent as photo.")
-            elif file.group == "animation":
-                api_url = self.__animation_api_url
-                self.__logger.info("Telegram", "File sent as animation.")
-            elif file.group == "video":
-                api_url = self.__video_api_url
-                self.__logger.info("Telegram", "File sent as video.")
-            elif file.group == "audio":
-                api_url = self.__audio_api_url
-                self.__logger.info("Telegram", "File sent as audio.")
-            else:
-                api_url = self.__document_api_url
-                self.__logger.info("Telegram", "File sent as document.")
-            post_response = self.__requester.post(api_url=api_url, files=file.file_headers, data=params)
-            if post_response:
-                return True, file.group
-            else:
-                return False, "failed"
-        else:
-            if file.exists:
-                params = {'chat_id':TELEGRAM_CHAT_ID, 'text':caption}
-                api_url = self.__message_api_url
-                self.__logger.info("Telegram", "File exceeds 50 MB, sent as message.")
-                post_response = self.__requester.post(api_url=api_url, data=params)
+            if self.__check_hash([file.hash]):
+                params = {'chat_id':TELEGRAM_CHAT_ID, 'caption':caption}
+                if file.group == "photo":
+                    api_url = self.__image_api_url
+                    self.__logger.info("Telegram", "File sent as photo.")
+                elif file.group == "animation":
+                    api_url = self.__animation_api_url
+                    self.__logger.info("Telegram", "File sent as animation.")
+                elif file.group == "video":
+                    api_url = self.__video_api_url
+                    self.__logger.info("Telegram", "File sent as video.")
+                elif file.group == "audio":
+                    api_url = self.__audio_api_url
+                    self.__logger.info("Telegram", "File sent as audio.")
+                else:
+                    api_url = self.__document_api_url
+                    self.__logger.info("Telegram", "File sent as document.")
+                post_response = self.__requester.post(api_url=api_url, files=file.file_headers, data=params)
                 if post_response:
-                    return True, "message"
+                    self.__update_hashes([file.hash], post_id)
+                    return True, file.group
                 else:
                     return False, "failed"
+            else:
+                return False, "duplicate"
+        else:
+            if file.exists:
+                if self.__check_hash([file.hash]):
+                    params = {'chat_id':TELEGRAM_CHAT_ID, 'text':caption}
+                    api_url = self.__message_api_url
+                    self.__logger.info("Telegram", "File exceeds 50 MB, sent as message.")
+                    post_response = self.__requester.post(api_url=api_url, data=params)
+                    if post_response:
+                        self.__update_hashes([file.hash], post_id)
+                        return True, "message"
+                    else:
+                        return False, "failed"
+                else:
+                    return False, "duplicate"
             else:
                 self.__logger.info("Telegram", "File does not exist.")
                 return False, "failed"
 
-    def __send_group(self, file_list:list[File], caption_list:list[str]) -> tuple[bool, str]:
+    def __send_group(self, file_list:list[File], caption_list:list[str], post_id:str) -> tuple[bool, str]:
         media_types = [file.group for file in file_list]
         if "document" in media_types:
             media_types = ["document" for file in file_list]
@@ -412,15 +452,16 @@ class TelegramHelper:
         self.__logger.info("Telegram", "Files sent as media group.")
         post_response = self.__requester.post(api_url=api_url, files=file_bytes, data=params)
         if post_response:
+            self.__update_hashes([file.hash for file in file_list], post_id)
             return True, "group"
         else:
             return False, "failed"
 
-    def __send_media(self, file_list:list[File], caption_list:list) -> tuple[bool, str]:
+    def __send_media(self, file_list:list[File], caption_list:list, post_id:str) -> tuple[bool, str]:
         if len(caption_list) > 1:
-            return self.__send_group(file_list, caption_list)
+            return self.__send_group(file_list, caption_list, post_id)
         else:
-            return self.__send_single(file_list[0], caption_list[0])
+            return self.__send_single(file_list[0], caption_list[0], post_id)
 
     def __fix_json_text(self, escaped_text:str) -> str:
         return html.unescape(escaped_text.encode("utf-16", "surrogatepass").decode("utf-16"))
@@ -430,7 +471,7 @@ class TelegramHelper:
         base_message = self.__get_base_message_from_post_details(post_details)
         file = File(post_details[4], self.__logger, self.__requester)
         caption = "\n".join(base_message)
-        return self.__send_media([file], [caption])
+        return self.__send_media([file], [caption], post_details[0])
 
     def __solve_reddit_video(self, post_details:list) -> tuple[bool, str]:
         self.__logger.info("Telegram", "Post falls under Reddit-hosted videos.")
@@ -448,7 +489,7 @@ class TelegramHelper:
             message_extension.append(f"Audio URL: {candidate_audio_url}")
         base_message.extend(message_extension)
         caption = "\n".join(base_message)
-        return self.__send_media([video_file], [caption])
+        return self.__send_media([video_file], [caption], post_details[0])
 
     def __solve_reddit_gallery(self, post_details:list) -> tuple[bool, str]:
         self.__logger.info("Telegram", "Post falls under Reddit-hosted gallery.")
@@ -470,7 +511,7 @@ class TelegramHelper:
                     div_range = range(div*max_group_length, min((div+1)*max_group_length, len(file_list)))
                     current_file_group = [file_list[ix] for ix in div_range]
                     current_caption_group = [caption_list[ix] for ix in div_range]
-                    send_status.append(self.__send_media(current_file_group, current_caption_group)[0])
+                    send_status.append(self.__send_media(current_file_group, current_caption_group, post_details[0])[0])
                 if False not in send_status:
                     return True, "group"
                 else:
@@ -511,7 +552,7 @@ class TelegramHelper:
         base_message = self.__get_base_message_from_post_details(post_details)
         file = File(post_details[4], self.__logger, self.__requester)
         caption = "\n".join(base_message)
-        return self.__send_media([file], [caption])
+        return self.__send_media([file], [caption], post_details[0])
 
     def __solve_redgifs_gfycat(self, post_details:list) -> tuple[bool, str]:
         self.__logger.info("Telegram", "Post falls under Redgifs/Gfycat-hosted media.")
@@ -522,7 +563,7 @@ class TelegramHelper:
             media_link = re.search(CONTENT_RE, page_text).group(0)
             file = File(media_link, self.__logger, self.__requester)
             caption = "\n".join(base_message + [f"Media URL: {media_link}"])
-            return self.__send_media([file], [caption])
+            return self.__send_media([file], [caption], post_details[0])
         except:
             return False, "failed"
 
@@ -531,7 +572,7 @@ class TelegramHelper:
         base_message = self.__get_base_message_from_post_details(post_details)
         file = File(post_details[4], self.__logger, self.__requester)
         caption = "\n".join(base_message)
-        return self.__send_media([file], [caption])
+        return self.__send_media([file], [caption], post_details[0])
 
     def solve_post(self, post_details:list[str]) -> tuple[bool, str]:
         '''Solves post given post details.'''

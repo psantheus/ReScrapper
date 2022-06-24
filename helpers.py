@@ -1,5 +1,4 @@
 from load_variables import *
-import boto3
 import discord
 import hashlib
 import html

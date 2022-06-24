@@ -55,10 +55,13 @@ class Worker:
         if self.__failed_posts:
             self.__logger.info("Worker", "Failed posts found, queued for retyring.")
             self.__pending_posts.extend(self.__failed_posts)
+            self.__failed_posts.clear()
+            self.__list_to_file(self.__failed_posts, "failed_posts.txt")
             self.__pending_posts = list(set(self.__pending_posts))
             self.__pending_posts = sorted(self.__pending_posts, reverse=True)
+            self.__list_to_file(self.__pending_posts, "pending_posts.txt")
         else:
-            self.__logger.info("Wokrer", "No failed posts found, continuing as usual.")
+            self.__logger.info("Worker", "No failed posts found, continuing as usual.")
 
     def load_refresher(self):
         self.__logger.info("Worker", "Periodic check for new posts if any.")

@@ -106,6 +106,8 @@ class Worker:
                     self.__discord.send(MESSAGES_WEBHOOK, post_id)
                 elif group == "group":
                     self.__discord.send(GROUP_WEBHOOK, post_id)
+                elif group == "metadata":
+                    self.__discord.send(METADATA_WEBHOOK, post_id)
                 self.__logger.info("Worker", f"Finished solving post with id: {post_id}")
                 self.__processed_posts.append(post_id)
                 self.__list_to_file(self.__processed_posts, "processed_posts.txt")

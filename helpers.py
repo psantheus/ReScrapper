@@ -298,7 +298,12 @@ class RedditHelper:
         post_title = self.__fix_json_text(parent_post_data["title"])
         post_author = f"u/{parent_post_data['author']}"
         post_subreddit = parent_post_data["subreddit_name_prefixed"]
-        post_primary_link = self.__fix_json_text(parent_post_data["url_overridden_by_dest"])
+
+        if "url_overridden_by_dest" in parent_post_data and parent_post_data["url_overridden_by_dest"]:
+            post_primary_link = self.__fix_json_text(parent_post_data["url_overridden_by_dest"])
+        elif "media_metadata" in parent_post_data and parent_post_data["media_metadata"]:
+            post_primary_link = "media_metadata_not_null"
+
         self.__logger.info("Reddit", "Post details obtained successfully.")
         return [post_id, post_title, post_author, post_subreddit, post_primary_link]
 
@@ -308,12 +313,17 @@ class RedditHelper:
             return False
         elif "error" in json_data:
             return False
-        elif "url_overridden_by_dest" not in json_data[0]["data"]["children"][0]["data"]:
-            return False
-        elif not json_data[0]["data"]["children"][0]["data"]["url_overridden_by_dest"]:
-            return False
+
+        parent_post_data = json_data[0]["data"]["children"][0]["data"]
+        if parent_post_data:
+            if "url_overridden_by_dest" in parent_post_data and parent_post_data["url_overridden_by_dest"]:
+                return True
+            elif "media_metadata" in parent_post_data and parent_post_data["media_metadata"]:
+                return True
+            else:
+                return False
         else:
-            return True
+            return False
 
     def __fix_json_text(self, escaped_text:str) -> str:
         return html.unescape(escaped_text.encode("utf-16", "surrogatepass").decode("utf-16"))
@@ -324,7 +334,7 @@ class RedditHelper:
         currently_saved_posts = []
         if not excluded:
             excluded = []
-        for submission in self.__reddit_client.user.me().saved(limit=None):
+        for submission in self.__reddit_client.user.me().saved(limit=1):
             post_id = str(submission)
             if post_id not in excluded:
                 currently_saved_posts.append(post_id)
@@ -375,7 +385,7 @@ class TelegramHelper:
             self.__hash_dict[hash] = post_id
         self.__hash_dict_to_file()
 
-    def __get_base_message_from_post_details(self, post_details:list) -> list[str]:
+    def __get_base_message_from_post_details(self, post_details:list[str]) -> list[str]:
         base_message = []
         if post_details[0] is not None:
             base_message.append(f"Post ID: {post_details[0]}")
@@ -385,7 +395,7 @@ class TelegramHelper:
             base_message.append(f"by {post_details[2]}")
         if post_details[3] is not None:
             base_message.append(f"via {post_details[3]}")
-        if post_details[4] is not None:
+        if len(post_details) > 4 and post_details[4] is not None and post_details[4].startswith("http"):
             base_message.append(f"Primary URL: {post_details[4]}")
         self.__logger.info("Telegram", "Obtained base caption.")
         return base_message
@@ -394,7 +404,7 @@ class TelegramHelper:
         api_url = None
         params = None
         if file.file_headers:
-            if self.__check_hash([file.hash]):
+            if self.__check_hash(file.hash):
                 params = {'chat_id':TELEGRAM_CHAT_ID, 'caption':caption}
                 if file.group == "photo":
                     api_url = self.__image_api_url
@@ -421,7 +431,7 @@ class TelegramHelper:
                 return False, "duplicate"
         else:
             if file.exists:
-                if self.__check_hash([file.hash]):
+                if self.__check_hash(file.hash):
                     params = {'chat_id':TELEGRAM_CHAT_ID, 'text':caption}
                     api_url = self.__message_api_url
                     self.__logger.info("Telegram", "File exceeds 50 MB, sent as message.")
@@ -574,20 +584,70 @@ class TelegramHelper:
         caption = "\n".join(base_message)
         return self.__send_media([file], [caption], post_details[0])
 
+    def __media_metadata_solver(self, post_details:list) -> tuple[bool, str]:
+        self.__logger.info("Telegram", "Post falls under RTF Media.")
+        base_details = post_details[:4]
+        json_data = self.__requester.load_json(f"https://www.reddit.com/comments/{post_details[0]}.json")
+        parent_post_data = dict(json_data[0]["data"]["children"][0]["data"])
+        send_status = []
+        for file_id in parent_post_data["media_metadata"]:
+            file_data = parent_post_data["media_metadata"][file_id]
+            if file_data["status"] == "valid" and file_data["e"] == "Image":
+                media_link = self.__fix_json_text(file_data["s"]["u"])
+                file_details = [*base_details, media_link]
+                file_message = self.__get_base_message_from_post_details(file_details)
+                file = File(media_link, self.__logger, self.__requester)
+                caption = "\n".join(file_message)
+                send_status.append(self.__send_single(file, caption, post_details[0])[0])
+            elif file_data["status"] == "valid" and file_data["e"] == "AnimatedImage":
+                media_link = self.__fix_json_text(file_data["s"]["gif"])
+                file_details = [*base_details, media_link]
+                file_message = self.__get_base_message_from_post_details(file_details)
+                file = File(media_link, self.__logger, self.__requester)
+                caption = "\n".join(file_message)
+                send_status.append(self.__send_single(file, caption, post_details[0])[0])
+            elif file_data["status"] == "valid" and file_data["e"] == "RedditVideo":
+                video_height = file_data["y"]
+                candidate_video_url = f"https://v.redd.it/{file_id}/DASH_{video_height}.mp4"
+                candidate_audio_url = f"https://v.redd.it/{file_id}/DASH_audio.mp4"
+                message_extension = []
+                video_file = File(candidate_video_url, self.__logger, self.__requester)
+                audio_file = File(candidate_audio_url, self.__logger, self.__requester)
+                if video_file.exists:
+                    message_extension.append(f"Video URL: {candidate_video_url}")
+                if audio_file.exists:
+                    message_extension.append(f"Audio URL: {candidate_audio_url}")
+                file_message = self.__get_base_message_from_post_details(base_details)
+                file_message.extend(message_extension)
+                caption = "\n".join(file_message)
+                send_status.append(self.__send_media([video_file], [caption], post_details[0])[0])
+            else:
+                self.__logger.debug("Telegram", "Unknown kind, unable to solve.")
+        if True in send_status:
+            return True, "metadata"
+        else:
+            return False, "failed"
+
     def solve_post(self, post_details:list[str]) -> tuple[bool, str]:
         '''Solves post given post details.'''
-        domain, post_details[4] = self.__requester.check_domain(post_details[4])
-        if domain == "REDDIT_IMAGE":
-            return self.__solve_reddit_image(post_details)
-        elif domain == "REDDIT_VIDEO":
-            return self.__solve_reddit_video(post_details)
-        elif domain == "REDDIT_GALLERY":
-            return self.__solve_reddit_gallery(post_details)
-        elif domain == "IMGUR":
-            return self.__solve_imgur(post_details)
-        elif domain == "REDGIFS":
-            return self.__solve_redgifs_gfycat(post_details)
-        elif domain == "GFYCAT":
-            return self.__solve_redgifs_gfycat(post_details)
+        if post_details[4] != "media_metadata_not_null":
+            self.__logger.info("Telegram", "Single link solvable, proceeding using primary link.")
+            domain, post_details[4] = self.__requester.check_domain(post_details[4])
+            if domain == "REDDIT_IMAGE":
+                return self.__solve_reddit_image(post_details)
+            elif domain == "REDDIT_VIDEO":
+                return self.__solve_reddit_video(post_details)
+            elif domain == "REDDIT_GALLERY":
+                return self.__solve_reddit_gallery(post_details)
+            elif domain == "IMGUR":
+                return self.__solve_imgur(post_details)
+            elif domain == "REDGIFS":
+                return self.__solve_redgifs_gfycat(post_details)
+            elif domain == "GFYCAT":
+                return self.__solve_redgifs_gfycat(post_details)
+            else:
+                return self.__solve_others(post_details)
         else:
-            return self.__solve_others(post_details)
+            self.__logger.info("Telegram", "Primary link unavailable.")
+            self.__logger.info("Telegram", "Media metadata not null, proceeding with that.")
+            return self.__media_metadata_solver(post_details)

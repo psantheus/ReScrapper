@@ -3,4 +3,5 @@ testbench.ipynb
 pending_posts.txt
 processed_posts.txt
 failed_posts.txt
+hashes.txt
 events.log

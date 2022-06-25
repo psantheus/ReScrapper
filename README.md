@@ -11,3 +11,7 @@
 
 
 ### PS - Any S3 Compatible object storage can be implemented if needed, filebase experienced outages so removed it. Suggest me a good option that is free like filebase if you know one at u/ElucidatorZ T_T
+
+
+# 25th June 2022
+## Massive update incoming, with proper documentation, local only mode, and other features. Should be out in a couple of days ;)

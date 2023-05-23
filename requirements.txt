@@ -3,4 +3,4 @@ Pillow==9.1.1
 praw==7.6.0
 python-dotenv==0.20.0
 python_magic==0.4.27
-requests==2.27.1
+requests==2.31.0
